@@ -1,0 +1,48 @@
+Steps to convert class to function
+- if first token of current line is not "class"
+  output an error message and exit
+- save current line number
+- get name of class from second token
+- find line number of end of class
+- capture static displayName if set inside class,
+- capture static propTypes if set inside class,
+- if anything other than render method remains inside class,
+  output an error message and exit
+- determine if render method contains anything before the return statement
+- output this:
+  const {className} = ({{prop-names}}) =>
+- if has more than return, output this:
+  {
+    {body-of-render}
+  };
+- else output this:
+  {value-of-return-without-wrapping-parens};
+- close class with }
+- if static displayName was set inside class,
+  output it at end as
+  {className}.displayName = '{className}';
+- if propTypes was set inside class,
+  output it at end as
+  {className}.propTypes = {
+    {prop-types}
+  };
+
+Steps to convert function to class
+- if first token is not "const"
+  or third token is not "="
+  or line does not end with "=>" or "=> {",
+  output an error message and exit
+- get class name from second token
+- output this:
+  class {class-name} extends Component {
+- capture code up to ";"
+- output this:
+  static displayName = '{class-name}';
+  static propTypes = {
+    {prop-types}
+  };
+  render() {
+    const {{prop-list}} = this.props;
+    {code}
+  }
+}
