@@ -4,6 +4,10 @@
 " The second converts a React class-based component
 " to a stateless functional component.
 
+function! DeleteLines(start, end)
+  execute a:start . ',' . a:end . 'd'
+endfunction
+
 " Returns the line number of the first line found starting
 " from lineNum that matches a given regular expression.
 function! FindLine(startLineNum, pattern)
@@ -86,12 +90,27 @@ function! ReactFnToClass()
   endif
 
   let renderLines = GetLinesTo(currLineNum + 1, ';$')
+  call DeleteLines(currLineNum, currLineNum + len(renderLines))
+  let index = len(renderLines) - 1
+  let lastRenderLine = renderLines[index]
+  if lastRenderLine =~ ';$'
+    let renderLines[index] = lastRenderLine[0:-2]
+  endif
 
-  let displayNameLine = FindLine(lineNum, className . '.displayName =')
-  let displayName = LastToken(getline(displayNameLine))
+  let displayNameLineNum = FindLine(lineNum, className . '.displayName =')
+  let displayName = LastToken(getline(displayNameLineNum))
+  call DeleteLines(displayNameLineNum, displayNameLineNum)
 
-  let propTypesLine = FindLine(lineNum, className . '.propTypes =')
-  let propTypes = GetLinesTo(propTypesLine + 1, '.*};')
+  let propTypesLineNum = FindLine(lineNum, className . '.propTypes =')
+  let propTypes = GetLinesTo(propTypesLineNum + 1, '.*};')
+  let propNames = []
+  for line in propTypes
+    let propName = Trim(split(line, ':')[0])
+    if propName != '};'
+      call add(propNames, propName)
+    endif
+  endfor
+  call DeleteLines(propTypesLineNum, propTypesLineNum + len(propTypes))
 
   let lines = [
   \ 'class ' . className . ' extends Component {',
@@ -105,6 +124,7 @@ function! ReactFnToClass()
   let lines += [
   \ '',
   \ '  render() {',
+  \ '    const {' . join(propNames, ', ') . '} = this.props;',
   \ '    return (',
   \ ]
   for line in renderLines
@@ -116,70 +136,7 @@ function! ReactFnToClass()
   \ '}',
   \ ]
 
-  normal dd
   call append(currLineNum - 1, lines)
-  return
-
-  let currColNum = col('.')
-
-  :normal 0 " move to beginning of line
-
-  " Search for arrow starting at the current cursor position
-  " and move the cursor to the end of the match if found (e option).
-  let match = search('=>', 'e', currLineNum)
-
-  " If arrow found ...
-  if match
-    " If the character two past the arrow is { ...
-    let currLine = getline('.') " gets the entire current line
-    let index = col('.') + 1 " index of character 2 past arrow
-    let char = currLine[index:index] " gets character two after match
-    if char == '{'
-      " Move cursor right two characters,
-      " delete the open brace and the space that follows,
-      " and move to the next word.
-      ":normal llxxw
-      :normal llxx
-
-      let wordUnderCursor = expand('<cword>')
-      if wordUnderCursor == '=>'
-        " Move to next word
-        :normal w
-        let wordUnderCursor = expand('<cword>')
-      endif
-
-      if wordUnderCursor == 'return'
-        :normal dw
-      endif
-
-      " Find the next } preceded by any amount of whitespace.
-      call search('\s*}')
-
-      " If the only thing on the line is }, delete the line
-      let trimmedLine = Trim(getline('.'))
-      if trimmedLine == '}' || trimmedLine == '};'
-        :normal dd
-      else
-        :normal d$ " delete to end of line
-      endif
-    else
-      " If nothing follows the arrow, join the next line.
-      let wordUnderCursor = expand('<cword>')
-      if wordUnderCursor == '=>'
-        " Join next line to this one and move cursor left.
-        :normal Jh
-      endif
-
-      " Add "{<cr>return" after arrow.
-      :execute "normal a {\<cr>return "
-      " Add } on next line.
-      :execute "normal $a\<cr>};"
-    endif
-  else
-    " Move cursor back to start.
-    call cursor(currLineNum, currColNum)
-    return 'not found'
-  endif
 endfunction
 
 " If <leader>rf is not already mapped ...

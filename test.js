@@ -22,11 +22,13 @@ class Foo extends Component {
   }
 }
 
+// before
 const Foo = ({bar, baz}) =>
   <div>
     <div>bar = {bar}</div>
     <div>baz = {baz}</div>
   </div>;
+// after
 
 const Foo = ({bar, baz}) => {
   return (
@@ -37,10 +39,12 @@ const Foo = ({bar, baz}) => {
   );
 };
 
+// before
 Foo.displayName = 'FooBar';
 Foo.propTypes = {
   bar: number,
   baz: string
 };
+// after
 
 export default Foo1;
