@@ -15,7 +15,21 @@ function! FindLine(startLineNum, pattern)
     let found = line =~ a:pattern
     let lineNum += 1
   endwhile
-  return found ? lineNum - 1 : 0
+  return found ? lineNum - 1: 0
+endfunction
+
+function! GetLinesTo(startLineNum, pattern)
+  let lines = []
+  let lineNum = a:startLineNum
+  let lastLineNum = line('$')
+  let found = 0
+  while (!found && lineNum <= lastLineNum)
+    let line = getline(lineNum)
+    let found = line =~ a:pattern
+    call add(lines, line)
+    let lineNum += 1
+  endwhile
+  return lines
 endfunction
 
 function! LastToken(string)
@@ -31,9 +45,6 @@ function! ReactFnToClass()
   let currLineNum = line('.')
   let currLine = getline('.') " gets the entire current line
   let tokens = split(currLine, ' ')
-  "for token in tokens
-  "  echomsg('token = ' . token)
-  "endfor
 
   if (tokens[0] != 'const')
     echomsg('ReactFnToClass: first token must be "const"')
@@ -74,22 +85,39 @@ function! ReactFnToClass()
     endif
   endif
 
-  let displayNameLine = FindLine(lineNum, '.displayName =')
+  let renderLines = GetLinesTo(currLineNum + 1, ';$')
+
+  let displayNameLine = FindLine(lineNum, className . '.displayName =')
   let displayName = LastToken(getline(displayNameLine))
 
-  normal dd
-  call append(currLineNum - 1, [
+  let propTypesLine = FindLine(lineNum, className . '.propTypes =')
+  let propTypes = GetLinesTo(propTypesLine + 1, '.*};')
+
+  let lines = [
   \ 'class ' . className . ' extends Component {',
   \ '  static displayName = ' . displayName,
   \ '',
-  \ '  static propTypes = {',
-  \ '  }',
+  \ '  static propTypes = {'
+  \ ]
+  for line in propTypes
+    call add(lines, '  ' . line)
+  endfor
+  let lines += [
   \ '',
   \ '  render() {',
+  \ '    return (',
+  \ ]
+  for line in renderLines
+    call add(lines, '    ' . line)
+  endfor
+  let lines += [
+  \ '    );',
   \ '  }',
   \ '}',
-  \ ])
+  \ ]
 
+  normal dd
+  call append(currLineNum - 1, lines)
   return
 
   let currColNum = col('.')
