@@ -5,8 +5,16 @@
 " to a stateless functional component.
 
 function! DeleteLines(start, end)
-  execute a:start . ',' . a:end . 'd'
-endfunction
+  " Without silent the deletion is reported in the status bar.
+  execute 'silent ' . a:start . ',' . a:end . 'd'
+endf
+
+function! LogList(label, list)
+  echomsg(a:label)
+  for item in a:list
+    echomsg('  ' . item)
+  endfor
+endf
 
 " Returns the line number of the first line found starting
 " from lineNum that matches a given regular expression.
@@ -20,7 +28,7 @@ function! FindLine(startLineNum, pattern)
     let lineNum += 1
   endwhile
   return found ? lineNum - 1: 0
-endfunction
+endf
 
 function! GetLinesTo(startLineNum, pattern)
   let lines = []
@@ -34,16 +42,16 @@ function! GetLinesTo(startLineNum, pattern)
     let lineNum += 1
   endwhile
   return lines
-endfunction
+endf
 
 function! LastToken(string)
   let tokens = split(a:string, ' ')
   return tokens[len(tokens) - 1]
-endfunction
+endf
 
 function! Trim(string)
   return substitute(a:string, '^\s*\(.\{-}\)\s*$', '\1', '')
-endfunction
+endf
 
 function! ReactFnToClass()
   let currLineNum = line('.')
@@ -98,46 +106,64 @@ function! ReactFnToClass()
   endif
 
   let displayNameLineNum = FindLine(lineNum, className . '.displayName =')
-  let displayName = LastToken(getline(displayNameLineNum))
-  call DeleteLines(displayNameLineNum, displayNameLineNum)
+  if displayNameLineNum
+    let displayName = LastToken(getline(displayNameLineNum))
+    call DeleteLines(displayNameLineNum, displayNameLineNum)
+  endif
 
   let propTypesLineNum = FindLine(lineNum, className . '.propTypes =')
-  let propTypes = GetLinesTo(propTypesLineNum + 1, '.*};')
-  let propNames = []
-  for line in propTypes
-    let propName = Trim(split(line, ':')[0])
-    if propName != '};'
-      call add(propNames, propName)
-    endif
-  endfor
-  call DeleteLines(propTypesLineNum, propTypesLineNum + len(propTypes))
+  if propTypesLineNum
+    let propTypes = GetLinesTo(propTypesLineNum + 1, '.*};')
+    let propNames = []
+    for line in propTypes
+      let propName = Trim(split(line, ':')[0])
+      if propName != '};'
+        call add(propNames, propName)
+      endif
+    endfor
+    call DeleteLines(propTypesLineNum, propTypesLineNum + len(propTypes))
+  endif
 
-  let lines = [
-  \ 'class ' . className . ' extends Component {',
-  \ '  static displayName = ' . displayName,
-  \ '',
-  \ '  static propTypes = {'
-  \ ]
-  for line in propTypes
-    call add(lines, '  ' . line)
-  endfor
-  let lines += [
-  \ '',
-  \ '  render() {',
-  \ '    const {' . join(propNames, ', ') . '} = this.props;',
-  \ '    return (',
-  \ ]
+  let lines = ['class ' . className . ' extends Component {']
+
+  if exists('displayName')
+    let lines += [
+    \ '  static displayName = ' . displayName,
+    \ ''
+    \ ]
+  endif
+
+  if exists('propTypes')
+    call add(lines, '  static propTypes = {')
+    for line in propTypes
+      call add(lines, '  ' . line)
+    endfor
+    call add(lines, '')
+  endif
+
+  call add(lines, '  render() {')
+
+  if exists('propTypes')
+    call add(lines,
+    \ '    const {' . join(propNames, ', ') . '} = this.props;')
+  endif
+
+  call add(lines, '    return (')
+
   for line in renderLines
     call add(lines, '    ' . line)
   endfor
+
   let lines += [
   \ '    );',
   \ '  }',
   \ '}',
   \ ]
 
+  "call LogList('lines', lines)
+
   call append(currLineNum - 1, lines)
-endfunction
+endf
 
 " If <leader>rf is not already mapped ...
 "if mapcheck("\<leader>rf", "N") == ""
