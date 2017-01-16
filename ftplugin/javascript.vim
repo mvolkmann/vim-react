@@ -333,7 +333,7 @@ function! ReactToggleComponent()
 endf
 
 " If <leader>rt is not already mapped ...
-"if mapcheck("\<leader>rt", "N") == ""
+if mapcheck("\<leader>rt", "N") == ""
   nnoremap <leader>rt :call ReactToggleComponent()<cr>
-"endif
+endif
 
