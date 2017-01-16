@@ -9,15 +9,9 @@ function! DeleteLines(start, end)
   execute 'silent ' . a:start . ',' . a:end . 'd'
 endf
 
-function! LogList(label, list)
-  echomsg(a:label)
-  for item in a:list
-    echomsg('  ' . item)
-  endfor
-endf
-
 " Returns the line number of the first line found starting
-" from lineNum that matches a given regular expression.
+" from lineNum that matches a given regular expression
+" or zero of none is found.
 function! FindLine(startLineNum, pattern)
   let lineNum = a:startLineNum
   let lastLineNum = line('$')
@@ -57,12 +51,81 @@ function! LastToken(string)
   return tokens[len(tokens) - 1]
 endf
 
+function! LogList(label, list)
+  echomsg(a:label)
+  for item in a:list
+    echomsg('  ' . item)
+  endfor
+endf
+
+" Returns the nth token in a string
+" where the first token is 1.
+function! NthToken(n, string)
+  let tokens = split(a:string, ' ')
+  return tokens[a:n - 1]
+endf
+
 function! Trim(string)
   return substitute(a:string, '^\s*\(.\{-}\)\s*$', '\1', '')
 endf
 
 function! ReactClassToFn()
-  echomsg('ReactClassToFn not implemented yet')
+  let line = getline('.') " gets entire current line
+  let tokens = split(line, ' ')
+  if tokens[0] != 'class'
+    echomsg('must start with "class"')
+    return
+  endif
+  if line !~ ' extends Component {$' &&
+  \ line !~ ' extends React.Component {$'
+    echomsg('must extend Component')
+    return
+  endif
+
+  let startLineNum = line('.')
+  let endLineNum = FindLine(startLineNum, '^}')
+  if !endLineNum
+    errormsg('end of class definition not found')
+    return
+  endif
+
+  let className = tokens[1]
+
+  let displayNameLineNum = FindLine(startLineNum, 'static displayName = ')
+  if displayNameLineNum
+    let line = getline(displayNameLineNum)
+    let pattern = '\vstatic displayName \= ''(.+)'';'
+    let result = matchlist(line, pattern)
+    let displayName = result[1] " first capture group
+  endif
+
+  let propNames = 'props go here'
+  let propTypes = 'prop types go here'
+
+  let lines = [
+  \ 'const ' . className . ' = ({' . propNames . '}) =>',
+  \ '  return (',
+  \ '  );',
+  \ '};'
+  \ ]
+
+  if exists('displayName')
+    let lines += [
+    \ '',
+    \ className . ".displayName = '" . displayName . "';"
+  \ ]
+  endif
+
+  if exists('propTypes')
+    let lines += [
+    \ '',
+    \ className . '.propTypes = {',
+    \ '};'
+    \ ]
+  endif
+
+  call DeleteLines(startLineNum, endLineNum)
+  call append(startLineNum - 1, lines)
 endf
 
 function! ReactFnToClass()
@@ -200,8 +263,6 @@ function! ReactFnToClass()
   endif
 
   let lines += ['  }', '}']
-
-  "call LogList('lines', lines)
 
   call append(lineNum - 1, lines)
 endf

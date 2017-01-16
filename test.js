@@ -2,8 +2,9 @@ import React, {Component} from 'react';
 
 const {number, string} = React.PropTypes;
 
+// before
 class Foo extends Component {
-  static displayName = 'Foo';
+  static displayName = 'Fool';
 
   static propTypes = {
     bar: number,
@@ -21,6 +22,7 @@ class Foo extends Component {
     );
   }
 }
+// after
 
 // before
 const Foo = ({bar, baz}) =>
