@@ -44,6 +44,14 @@ function! GetLinesTo(startLineNum, pattern)
   return lines
 endf
 
+" If line is the beginning of a class definition,
+" returns the class name;
+" otherwise returns 0 for false.
+" If line contains "class" but isn't a proper start
+" for a class definition, returns -1.
+function! IsClassDefinition(line)
+endf
+
 function! LastToken(string)
   let tokens = split(a:string, ' ')
   return tokens[len(tokens) - 1]
@@ -53,18 +61,27 @@ function! Trim(string)
   return substitute(a:string, '^\s*\(.\{-}\)\s*$', '\1', '')
 endf
 
+function! ReactClassToFn()
+  echomsg('ReactClassToFn not implemented yet')
+endf
+
 function! ReactFnToClass()
-  let currLineNum = line('.')
-  let currLine = getline('.') " gets the entire current line
-  let tokens = split(currLine, ' ')
+  let line = getline('.') " gets entire current line
+
+  if line !~ ' =>'
+    echomsg('not an arrow function')
+    return
+  endif
+
+  let tokens = split(line, ' ')
 
   if (tokens[0] != 'const')
-    echomsg('ReactFnToClass: first token must be "const"')
+    echomsg('arrow function should be assigned using "const"')
     return
   endif
 
   if (tokens[2] != '=')
-    echomsg('ReactFnToClass: third token must be "="')
+    echomsg('arrow function should be assigned to variable')
     return
   endif
 
@@ -74,16 +91,31 @@ function! ReactFnToClass()
   let isAF = lastToken == '=>' ||
   \ (prevToken == '=>' && lastToken == '{')
   if (!isAF)
-    echomsg('ReactFnToClass: must be an arrow function')
+    echomsg('arrow function first line must end with => or => {')
     return
   endif
 
   let className = tokens[1]
-
-  let lineNum = currLineNum
-  let lastLineNum = line('$')
+  let lineNum = line('.')
 
   if lastToken == '{'
+    " Find next line that only contains "};".
+    if !FindLine(lineNum, '^\w*};\w*$')
+      echomsg('ReactFnToClass: arrow function end not found')
+      return -1
+    endif
+  else
+    " Find next line that ends with ";".
+    if !FindLine(lineNum, ';\w*$')
+      echomsg('ReactFnToClass: arrow function end not found')
+      return
+    endif
+  endif
+
+  let lineNum = line('.')
+
+  let hasBlock = line =~ '{$'
+  if hasBlock
     " Find next line that only contains "};".
     if !FindLine(lineNum, '^\w*};\w*$')
       echomsg('ReactFnToClass: arrow function end not found')
@@ -97,12 +129,18 @@ function! ReactFnToClass()
     endif
   endif
 
-  let renderLines = GetLinesTo(currLineNum + 1, ';$')
-  call DeleteLines(currLineNum, currLineNum + len(renderLines))
-  let index = len(renderLines) - 1
-  let lastRenderLine = renderLines[index]
-  if lastRenderLine =~ ';$'
-    let renderLines[index] = lastRenderLine[0:-2]
+  let renderLines = GetLinesTo(lineNum + 1, ';$')
+
+  call DeleteLines(lineNum,
+  \ lineNum + len(renderLines) + (hasBlock ? 1 : 0))
+
+  if !hasBlock
+    " Remove semicolon from end of last line if exists.
+    let index = len(renderLines) - 1
+    let lastRenderLine = renderLines[index]
+    if lastRenderLine =~ ';$'
+      let renderLines[index] = lastRenderLine[0:-2]
+    endif
   endif
 
   let displayNameLineNum = FindLine(lineNum, className . '.displayName =')
@@ -148,29 +186,39 @@ function! ReactFnToClass()
     \ '    const {' . join(propNames, ', ') . '} = this.props;')
   endif
 
-  call add(lines, '    return (')
+  if !hasBlock
+    call add(lines, '    return (')
+  endif
+  let indent = hasBlock ? '' : '  '
 
   for line in renderLines
-    call add(lines, '    ' . line)
+    call add(lines, indent . '  ' . line)
   endfor
 
-  let lines += [
-  \ '    );',
-  \ '  }',
-  \ '}',
-  \ ]
+  if !hasBlock
+    call add(lines, '    );')
+  endif
+
+  let lines += ['  }', '}']
 
   "call LogList('lines', lines)
 
-  call append(currLineNum - 1, lines)
+  call append(lineNum - 1, lines)
 endf
 
-" If <leader>rf is not already mapped ...
-"if mapcheck("\<leader>rf", "N") == ""
-  nnoremap <leader>rc :call ReactClassToFn()<cr>
-"endif
+function! ReactToggleComponent()
+  let line = getline('.') " gets entire current line
+  if line =~ '=>$' || line =~ '=> {$'
+    call ReactFnToClass()
+  elseif line =~ '^class ' || line =~ ' class '
+    call ReactClassToFn()
+  else
+    echomsg('must be on first line of a React component')
+  endif
+endf
 
-" If <leader>rc is not already mapped ...
-"if mapcheck("\<leader>rc", "N") == ""
-  nnoremap <leader>rc :call ReactFnToClass()<cr>
-"endif
+" If <leader>rt is not already mapped ...
+if mapcheck("\<leader>rt", "N") == ""
+  nnoremap <leader>rt :call ReactToggleComponent()<cr>
+endif
+

@@ -30,6 +30,7 @@ const Foo = ({bar, baz}) =>
   </div>;
 // after
 
+// before
 const Foo = ({bar, baz}) => {
   return (
     <div>
@@ -38,6 +39,7 @@ const Foo = ({bar, baz}) => {
     </div>
   );
 };
+// after
 
 // before
 Foo.displayName = 'FooBar';
