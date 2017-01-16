@@ -4,6 +4,12 @@
 " The second converts a React class-based component
 " to a stateless functional component.
 
+function! DeleteLineIfBlank(lineNum)
+  if (len(Trim(getline(a:lineNum))) == 0)
+    execute 'silent ' . a:lineNum . 'd'
+  endif
+endf
+
 function! DeleteLines(start, end)
   " Without silent the deletion is reported in the status bar.
   execute 'silent ' . a:start . ',' . a:end . 'd'
@@ -20,7 +26,7 @@ function! FindLine(startLineNum, pattern)
     let line = getline(lineNum)
     let found = line =~ a:pattern
     let lineNum += 1
-  endwhile
+  endw
   return found ? lineNum - 1: 0
 endf
 
@@ -34,7 +40,7 @@ function! GetLinesTo(startLineNum, pattern)
     let found = line =~ a:pattern
     call add(lines, line)
     let lineNum += 1
-  endwhile
+  endw
   return lines
 endf
 
@@ -69,6 +75,7 @@ function! Trim(string)
   return substitute(a:string, '^\s*\(.\{-}\)\s*$', '\1', '')
 endf
 
+" Converts a React component definition from a class to an arrow function.
 function! ReactClassToFn()
   let line = getline('.') " gets entire current line
   let tokens = split(line, ' ')
@@ -99,15 +106,53 @@ function! ReactClassToFn()
     let displayName = result[1] " first capture group
   endif
 
-  let propNames = 'props go here'
-  let propTypes = 'prop types go here'
+  let propTypesLineNum = FindLine(startLineNum, 'static propTypes = {')
+  if propTypesLineNum
+    let propTypesLines = GetLinesTo(propTypesLineNum + 1, '};$')
+    call remove(propTypesLines, len(propTypesLines) - 1)
+    let propNames = []
+    for line in propTypesLines
+      call add(propNames, split(Trim(line), ':')[0])
+    endfor
+    let params = '{' . join(propNames, ', ') . '}'
+  else
+    let params = ''
+  endif
 
-  let lines = [
-  \ 'const ' . className . ' = ({' . propNames . '}) =>',
-  \ '  return (',
-  \ '  );',
-  \ '};'
-  \ ]
+  let renderLineNum = FindLine(startLineNum, ' render() {')
+  if renderLineNum
+    let renderLines = GetLinesTo(renderLineNum + 1, '}$')
+
+    " Remove last line that closes the render method.
+    call remove(renderLines, len(renderLines) - 1)
+
+    " Remove any lines that destructure this.props since
+    " all are destructured in the arrow function parameter list.
+    let length = len(renderLines)
+    let index = 0
+    while index < length
+      let line = renderLines[index]
+      if line =~ '} = this.props;'
+        call remove(renderLines, index)
+        let length -= 1
+      endif
+      let index += 1
+    endw
+
+    " If the first render line is empty, remove it.
+    if len(Trim(renderLines[0])) == 0
+      call remove(renderLines, 0)
+    endif
+  else
+    let renderLines = []
+  endif
+
+  let lines = ['const ' . className . ' = (' . params . ') => {']
+
+  for line in renderLines
+    call add(lines, line[2:])
+  endfor
+  call add(lines, '};')
 
   if exists('displayName')
     let lines += [
@@ -116,18 +161,19 @@ function! ReactClassToFn()
   \ ]
   endif
 
-  if exists('propTypes')
-    let lines += [
-    \ '',
-    \ className . '.propTypes = {',
-    \ '};'
-    \ ]
+  if exists('propTypesLines')
+    let lines += ['', className . '.propTypes = {']
+    for line in propTypesLines
+      call add(lines, '  ' . Trim(line))
+    endfor
+    let lines += ['};']
   endif
 
   call DeleteLines(startLineNum, endLineNum)
   call append(startLineNum - 1, lines)
 endf
 
+" Converts a React component definition from an arrow function to a class.
 function! ReactFnToClass()
   let line = getline('.') " gets entire current line
 
@@ -210,6 +256,7 @@ function! ReactFnToClass()
   if displayNameLineNum
     let displayName = LastToken(getline(displayNameLineNum))
     call DeleteLines(displayNameLineNum, displayNameLineNum)
+    call DeleteLineIfBlank(displayNameLineNum - 1)
   endif
 
   let propTypesLineNum = FindLine(lineNum, className . '.propTypes =')
@@ -223,6 +270,7 @@ function! ReactFnToClass()
       endif
     endfor
     call DeleteLines(propTypesLineNum, propTypesLineNum + len(propTypes))
+    call DeleteLineIfBlank(propTypesLineNum - 1)
   endif
 
   let lines = ['class ' . className . ' extends Component {']
@@ -268,6 +316,9 @@ function! ReactFnToClass()
 endf
 
 function! ReactToggleComponent()
+  let lineNum = line('.')
+  let colNum = col('.')
+
   let line = getline('.') " gets entire current line
   if line =~ '=>$' || line =~ '=> {$'
     call ReactFnToClass()
@@ -276,10 +327,13 @@ function! ReactToggleComponent()
   else
     echomsg('must be on first line of a React component')
   endif
+
+  " Move cursor back to start.
+  call cursor(lineNum, colNum)
 endf
 
 " If <leader>rt is not already mapped ...
-if mapcheck("\<leader>rt", "N") == ""
+"if mapcheck("\<leader>rt", "N") == ""
   nnoremap <leader>rt :call ReactToggleComponent()<cr>
-endif
+"endif
 

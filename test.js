@@ -4,7 +4,7 @@ const {number, string} = React.PropTypes;
 
 // before
 class Foo extends Component {
-  static displayName = 'Fool';
+  static displayName = 'Foo';
 
   static propTypes = {
     bar: number,
@@ -13,7 +13,6 @@ class Foo extends Component {
 
   render() {
     const {bar, baz} = this.props;
-
     return (
       <div>
         <div>bar = {bar}</div>
