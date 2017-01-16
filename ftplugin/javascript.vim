@@ -60,7 +60,7 @@ endf
 function! LogList(label, list)
   echomsg(a:label)
   for item in a:list
-    echomsg('  ' . item)
+    echomsg('  ' . len(item) . ': ' . item)
   endfor
 endf
 
@@ -80,6 +80,10 @@ endf
 
 function! Trim(string)
   return substitute(a:string, '^\s*\(.\{-}\)\s*$', '\1', '')
+endf
+
+function! TrimTrailing(string)
+  return substitute(a:string, '^(\s*\.\{-}\)\s*$', '\1', '')
 endf
 
 " Converts a React component definition from a class to an arrow function.
@@ -216,21 +220,6 @@ function! ReactFnToClass()
   endif
 
   let className = tokens[1]
-  let lineNum = line('.')
-
-  if lastToken == '{'
-    " Find next line that only contains "};".
-    if !FindLine(lineNum, '^\w*};\w*$')
-      echomsg('ReactFnToClass: arrow function end not found')
-      return -1
-    endif
-  else
-    " Find next line that ends with ";".
-    if !FindLine(lineNum, ';\w*$')
-      echomsg('ReactFnToClass: arrow function end not found')
-      return
-    endif
-  endif
 
   let lineNum = line('.')
 
@@ -238,13 +227,13 @@ function! ReactFnToClass()
   if hasBlock
     " Find next line that only contains "};".
     if !FindLine(lineNum, '^\w*};\w*$')
-      echomsg('ReactFnToClass: arrow function end not found')
+      echomsg('arrow function end not found')
       return
     endif
   else
     " Find next line that ends with ";".
     if !FindLine(lineNum, ';\w*$')
-      echomsg('ReactFnToClass: arrow function end not found')
+      echomsg('arrow function end not found')
       return
     endif
   endif
@@ -315,7 +304,8 @@ function! ReactFnToClass()
   let indent = hasBlock ? '' : '  '
 
   for line in renderLines
-    call add(lines, indent . '  ' . line)
+    let output = len(line) ? indent . '  ' . line : line
+    call add(lines, output)
   endfor
 
   if !hasBlock
