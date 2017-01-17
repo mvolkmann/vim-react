@@ -58,9 +58,9 @@ function! LastToken(string)
 endf
 
 function! LogList(label, list)
-  echomsg(a:label)
+  echo a:label
   for item in a:list
-    echomsg('  ' . len(item) . ': ' . item)
+    echo '  ' . len(item) . ': ' . item
   endfor
 endf
 
@@ -91,19 +91,19 @@ function! ReactClassToFn()
   let line = getline('.') " gets entire current line
   let tokens = split(line, ' ')
   if tokens[0] != 'class'
-    echomsg('must start with "class"')
+    echo 'must start with "class"'
     return
   endif
   if line !~ ' extends Component {$' &&
   \ line !~ ' extends React.Component {$'
-    echomsg('must extend Component')
+    echo 'must extend Component'
     return
   endif
 
   let startLineNum = line('.')
   let endLineNum = FindLine(startLineNum, '^}')
   if !endLineNum
-    errormsg('end of class definition not found')
+    echo 'end of class definition not found'
     return
   endif
 
@@ -193,19 +193,19 @@ function! ReactFnToClass()
   let line = getline('.') " gets entire current line
 
   if line !~ ' =>'
-    echomsg('not an arrow function')
+    echo 'not an arrow function'
     return
   endif
 
   let tokens = split(line, ' ')
 
   if (tokens[0] != 'const')
-    echomsg('arrow function should be assigned using "const"')
+    echo 'arrow function should be assigned using "const"'
     return
   endif
 
   if (tokens[2] != '=')
-    echomsg('arrow function should be assigned to variable')
+    echo 'arrow function should be assigned to variable'
     return
   endif
 
@@ -215,7 +215,7 @@ function! ReactFnToClass()
   let isAF = lastToken == '=>' ||
   \ (prevToken == '=>' && lastToken == '{')
   if (!isAF)
-    echomsg('arrow function first line must end with => or => {')
+    echo 'arrow function first line must end with => or => {'
     return
   endif
 
@@ -227,13 +227,13 @@ function! ReactFnToClass()
   if hasBlock
     " Find next line that only contains "};".
     if !FindLine(lineNum, '^\w*};\w*$')
-      echomsg('arrow function end not found')
+      echo 'arrow function end not found'
       return
     endif
   else
     " Find next line that ends with ";".
     if !FindLine(lineNum, ';\w*$')
-      echomsg('arrow function end not found')
+      echo 'arrow function end not found'
       return
     endif
   endif
@@ -327,7 +327,7 @@ function! ReactToggleComponent()
   elseif line =~ '^class ' || line =~ ' class '
     call ReactClassToFn()
   else
-    echomsg('must be on first line of a React component')
+    echo 'must be on first line of a React component'
   endif
 
   " Move cursor back to start.
