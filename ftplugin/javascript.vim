@@ -385,8 +385,8 @@ endif
 
 " If <leader>jc for "JSX Comment" is not already mapped ...
 if mapcheck('\<leader>jc', 'N') ==# ''
-  nmap <leader>jc :call JSXCommentRemove()<cr>
+  nnoremap <leader>jc :call JSXCommentRemove()<cr>
   " <c-u> removes the automatic range specification when command mode is
   " entered from visual mode, changing the command line from :'<'> to just :
-  vmap <leader>jc :<c-u>call JSXCommentAdd()<cr>
+  vnoremap <leader>jc :<c-u>call JSXCommentAdd()<cr>
 endif
