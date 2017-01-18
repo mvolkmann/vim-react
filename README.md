@@ -53,14 +53,14 @@ class Foo extends Component {
 `ReactToggleComponent` will convert either of these forms to the other.
 
 ### JSXCommentAdd
-This function adds a JSX comment {/* ... */}
+This function adds a JSX comment `{/* ... */}`
 around the lines selected in visual mode.
 It is mapped to `<leader>jc` in visual mode
 unless that key is already mapped.
 
 ### JSXCommentRemove
-This function removes a JSX comment {/* ... */}
-surround the current line in normal mode.
+This function removes the JSX comment `{/* ... */}`
+surrounding the current line in normal mode.
 It is mapped to `<leader>jc` in normal mode
 unless that key is already mapped.
 
