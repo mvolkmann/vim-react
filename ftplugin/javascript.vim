@@ -1,8 +1,6 @@
-" This plugin defines two commands.
-" The first converts a React stateless functional component
-" to a class-based component.
-" The second converts a React class-based component
-" to a stateless functional component.
+function! DeleteLine(lineNum)
+  call DeleteLines(a:lineNum, a:lineNum)
+endf
 
 function! DeleteLineIfBlank(lineNum)
   if (len(Trim(getline(a:lineNum))) == 0)
@@ -15,14 +13,43 @@ function! DeleteLines(start, end)
   execute 'silent ' . a:start . ',' . a:end . 'd'
 endf
 
-" Returns the line number of the first line found starting
+" Returns the line number of the next line found starting
 " from lineNum that matches a given regular expression
 " or zero of none is found.
-function! FindLine(startLineNum, pattern)
+function! FindNextLine(startLineNum, pattern)
   let lineNum = a:startLineNum
   let lastLineNum = line('$')
   let found = 0
-  while (!found && lineNum <= lastLineNum)
+  while (!found && lineNum < lastLineNum)
+    let line = getline(lineNum)
+    let found = line =~# a:pattern
+    let lineNum += 1
+  endw
+  return found ? lineNum - 1: 0
+endf
+
+" Returns the line number of the previous line found starting
+" from lineNum that matches a given regular expression
+" or zero of none is found.
+function! FindPreviousLine(startLineNum, pattern)
+  let lineNum = a:startLineNum
+  let found = 0
+  while (!found && lineNum > 0)
+    let line = getline(lineNum)
+    let found = line =~# a:pattern
+    let lineNum -= 1
+  endw
+  return found ? lineNum + 1: 0
+endf
+
+" Returns the line number of the first line found starting
+" from lineNum that matches a given regular expression
+" or zero of none is found.
+function! FindNextLine(startLineNum, pattern)
+  let lineNum = a:startLineNum
+  let lastLineNum = line('$')
+  let found = 0
+  while (!found && lineNum < lastLineNum)
     let line = getline(lineNum)
     let found = line =~ a:pattern
     let lineNum += 1
@@ -44,12 +71,25 @@ function! GetLinesTo(startLineNum, pattern)
   return lines
 endf
 
-" If line is the beginning of a class definition,
-" returns the class name;
-" otherwise returns 0 for false.
-" If line contains "class" but isn't a proper start
-" for a class definition, returns -1.
-function! IsClassDefinition(line)
+function! JSXCommentAdd()
+  echo 'add entered'
+  let firstLineNum = line("'<")
+  let lastLineNum = line("'>")
+  call append(lastLineNum, '*/}')
+  call append(firstLineNum - 1, '{/*')
+endf
+
+function! JSXCommentRemove()
+  let lineNum = line('.')
+  let startLineNum = FindPreviousLine(lineNum, '{/\*')
+  if startLineNum == 0
+    echo 'no JSX comment found'
+    return
+  endif
+
+  let endLineNum = FindNextLine(lineNum, '*/}')
+  call DeleteLine(endLineNum)
+  call DeleteLine(startLineNum)
 endf
 
 function! LastToken(string)
@@ -90,18 +130,18 @@ endf
 function! ReactClassToFn()
   let line = getline('.') " gets entire current line
   let tokens = split(line, ' ')
-  if tokens[0] != 'class'
+  if tokens[0] !=# 'class'
     echo 'must start with "class"'
     return
   endif
-  if line !~ ' extends Component {$' &&
-  \ line !~ ' extends React.Component {$'
+  if line !~# ' extends Component {$' &&
+  \ line !~# ' extends React.Component {$'
     echo 'must extend Component'
     return
   endif
 
   let startLineNum = line('.')
-  let endLineNum = FindLine(startLineNum, '^}')
+  let endLineNum = FindNextLine(startLineNum, '^}')
   if !endLineNum
     echo 'end of class definition not found'
     return
@@ -109,7 +149,7 @@ function! ReactClassToFn()
 
   let className = tokens[1]
 
-  let displayNameLineNum = FindLine(startLineNum, 'static displayName = ')
+  let displayNameLineNum = FindNextLine(startLineNum, 'static displayName = ')
   if displayNameLineNum
     let line = getline(displayNameLineNum)
     let pattern = '\vstatic displayName \= ''(.+)'';'
@@ -117,10 +157,10 @@ function! ReactClassToFn()
     let displayName = result[1] " first capture group
   endif
 
-  let propTypesLineNum = FindLine(startLineNum, 'static propTypes = {$')
+  let propTypesLineNum = FindNextLine(startLineNum, 'static propTypes = {$')
   let propTypesInsideClass = propTypesLineNum ? 1 : 0
   if !propTypesLineNum
-    let propTypesLineNum = FindLine(startLineNum, className . '.propTypes = {$')
+    let propTypesLineNum = FindNextLine(startLineNum, className . '.propTypes = {$')
   endif
   if propTypesLineNum
     let propTypesLines = GetLinesTo(propTypesLineNum + 1, '};$')
@@ -134,7 +174,7 @@ function! ReactClassToFn()
     let params = ''
   endif
 
-  let renderLineNum = FindLine(startLineNum, ' render() {')
+  let renderLineNum = FindNextLine(startLineNum, ' render() {')
   if renderLineNum
     let renderLines = GetLinesTo(renderLineNum + 1, '^\s*}$')
 
@@ -147,7 +187,7 @@ function! ReactClassToFn()
     let index = 0
     while index < length
       let line = renderLines[index]
-      if line =~ '} = this.props;'
+      if line =~# '} = this.props;'
         call remove(renderLines, index)
         let length -= 1
       endif
@@ -192,19 +232,19 @@ endf
 function! ReactFnToClass()
   let line = getline('.') " gets entire current line
 
-  if line !~ ' =>'
+  if line !~# ' =>'
     echo 'not an arrow function'
     return
   endif
 
   let tokens = split(line, ' ')
 
-  if (tokens[0] != 'const')
+  if (tokens[0] !=# 'const')
     echo 'arrow function should be assigned using "const"'
     return
   endif
 
-  if (tokens[2] != '=')
+  if (tokens[2] !=# '=')
     echo 'arrow function should be assigned to variable'
     return
   endif
@@ -212,8 +252,8 @@ function! ReactFnToClass()
   let tokenCount = len(tokens)
   let lastToken = tokens[tokenCount - 1]
   let prevToken = tokens[tokenCount - 2]
-  let isAF = lastToken == '=>' ||
-  \ (prevToken == '=>' && lastToken == '{')
+  let isAF = lastToken ==# '=>' ||
+  \ (prevToken ==# '=>' && lastToken ==# '{')
   if (!isAF)
     echo 'arrow function first line must end with => or => {'
     return
@@ -223,16 +263,16 @@ function! ReactFnToClass()
 
   let lineNum = line('.')
 
-  let hasBlock = line =~ '{$'
+  let hasBlock = line =~# '{$'
   if hasBlock
     " Find next line that only contains "};".
-    if !FindLine(lineNum, '^\w*};\w*$')
+    if !FindNextLine(lineNum, '^\w*};\w*$')
       echo 'arrow function end not found'
       return
     endif
   else
     " Find next line that ends with ";".
-    if !FindLine(lineNum, ';\w*$')
+    if !FindNextLine(lineNum, ';\w*$')
       echo 'arrow function end not found'
       return
     endif
@@ -248,25 +288,25 @@ function! ReactFnToClass()
     " Remove semicolon from end of last line if exists.
     let index = len(renderLines) - 1
     let lastRenderLine = renderLines[index]
-    if lastRenderLine =~ ';$'
+    if lastRenderLine =~# ';$'
       let renderLines[index] = lastRenderLine[0:-2]
     endif
   endif
 
-  let displayNameLineNum = FindLine(lineNum, className . '.displayName =')
+  let displayNameLineNum = FindNextLine(lineNum, className . '.displayName =')
   if displayNameLineNum
     let displayName = LastToken(getline(displayNameLineNum))
-    call DeleteLines(displayNameLineNum, displayNameLineNum)
+    call DeleteLine(displayNameLineNum)
     call DeleteLineIfBlank(displayNameLineNum - 1)
   endif
 
-  let propTypesLineNum = FindLine(lineNum, className . '.propTypes =')
+  let propTypesLineNum = FindNextLine(lineNum, className . '.propTypes =')
   if propTypesLineNum
     let propTypes = GetLinesTo(propTypesLineNum + 1, '.*};')
     let propNames = []
     for line in propTypes
       let propName = Trim(split(line, ':')[0])
-      if propName != '};'
+      if propName !=# '};'
         call add(propNames, propName)
       endif
     endfor
@@ -322,9 +362,9 @@ function! ReactToggleComponent()
   let colNum = col('.')
 
   let line = getline('.') " gets entire current line
-  if line =~ '=>$' || line =~ '=> {$'
+  if line =~# '=>$' || line =~# '=> {$'
     call ReactFnToClass()
-  elseif line =~ '^class ' || line =~ ' class '
+  elseif line =~# '^class ' || line =~# ' class '
     call ReactClassToFn()
   else
     echo 'must be on first line of a React component'
@@ -335,7 +375,10 @@ function! ReactToggleComponent()
 endf
 
 " If <leader>rt is not already mapped ...
-if mapcheck("\<leader>rt", "N") == ""
+if mapcheck('\<leader>rt', 'N') ==# ''
   nnoremap <leader>rt :call ReactToggleComponent()<cr>
 endif
 
+nmap <leader>jc :call JSXCommentRemove()<cr>
+"TODO: What does <c-u> do?
+vmap <leader>jc :<c-u>call JSXCommentAdd()<cr>
