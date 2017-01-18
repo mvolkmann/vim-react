@@ -1,7 +1,3 @@
-"let p = expand('<sfile>:h') . '/foo.vim'
-"echo 'p = ' . p
-"execute '0source ' + p
-
 " This file depends on many functions defined in plugins/utilities.vim.
 
 function! JSXCommentAdd()
