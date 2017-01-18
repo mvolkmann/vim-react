@@ -383,10 +383,12 @@ if mapcheck('\<leader>rt', 'N') ==# ''
   nnoremap <leader>rt :call ReactToggleComponent()<cr>
 endif
 
+" <c-u> removes the automatic range specification
+" when command mode is entered from visual mode,
+" changing the command line from :'<'> to just :
+
 " If <leader>jc for "JSX Comment" is not already mapped ...
 if mapcheck('\<leader>jc', 'N') ==# ''
   nnoremap <leader>jc :call JSXCommentRemove()<cr>
-  " <c-u> removes the automatic range specification when command mode is
-  " entered from visual mode, changing the command line from :'<'> to just :
   vnoremap <leader>jc :<c-u>call JSXCommentAdd()<cr>
 endif
