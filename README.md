@@ -1,4 +1,4 @@
-# vim-react-class-fn-toggle
+# vim-react
 
 This plugin provides several functions.
 
