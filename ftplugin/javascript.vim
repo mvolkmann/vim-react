@@ -72,11 +72,15 @@ function! GetLinesTo(startLineNum, pattern)
 endf
 
 function! JSXCommentAdd()
-  echo 'add entered'
+  " Get first and last line number selected in visual mode.
   let firstLineNum = line("'<")
   let lastLineNum = line("'>")
-  call append(lastLineNum, '*/}')
-  call append(firstLineNum - 1, '{/*')
+
+  let column = match(getline(firstLineNum), '\w')
+  let indent = repeat(' ', column - 1)
+
+  call append(lastLineNum, indent . '*/}')
+  call append(firstLineNum - 1, indent . '{/*')
 endf
 
 function! JSXCommentRemove()
@@ -374,11 +378,15 @@ function! ReactToggleComponent()
   call cursor(lineNum, colNum)
 endf
 
-" If <leader>rt is not already mapped ...
+" If <leader>rt for "React Toggle" is not already mapped ...
 if mapcheck('\<leader>rt', 'N') ==# ''
   nnoremap <leader>rt :call ReactToggleComponent()<cr>
 endif
 
-nmap <leader>jc :call JSXCommentRemove()<cr>
-"TODO: What does <c-u> do?
-vmap <leader>jc :<c-u>call JSXCommentAdd()<cr>
+" If <leader>jc for "JSX Comment" is not already mapped ...
+if mapcheck('\<leader>jc', 'N') ==# ''
+  nmap <leader>jc :call JSXCommentRemove()<cr>
+  " <c-u> removes the automatic range specification when command mode is
+  " entered from visual mode, changing the command line from :'<'> to just :
+  vmap <leader>jc :<c-u>call JSXCommentAdd()<cr>
+endif
