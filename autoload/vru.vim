@@ -1,7 +1,7 @@
 " This file name is an abbreviation for "Vim React Utilities".
 
 function! vru#DeleteLine(lineNum)
-  call DeleteLines(a:lineNum, a:lineNum)
+  call vru#DeleteLines(a:lineNum, a:lineNum)
 endf
 
 function! vru#DeleteLineIfBlank(lineNum)
