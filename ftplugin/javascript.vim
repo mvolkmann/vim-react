@@ -14,15 +14,15 @@ endf
 
 function! JSXCommentRemove()
   let lineNum = line('.')
-  let startLineNum = FindPreviousLine(lineNum, '{/\*')
+  let startLineNum = vru#FindPreviousLine(lineNum, '{/\*')
   if startLineNum == 0
     echo 'no JSX comment found'
     return
   endif
 
-  let endLineNum = FindNextLine(lineNum, '*/}')
-  call DeleteLine(endLineNum)
-  call DeleteLine(startLineNum)
+  let endLineNum = vru#FindNextLine(lineNum, '*/}')
+  call vru#DeleteLine(endLineNum)
+  call vru#DeleteLine(startLineNum)
 endf
 
 " Converts a React component definition from a class to an arrow function.
@@ -40,7 +40,7 @@ function! ReactClassToFn()
   endif
 
   let startLineNum = line('.')
-  let endLineNum = FindNextLine(startLineNum, '^}')
+  let endLineNum = vru#FindNextLine(startLineNum, '^}')
   if !endLineNum
     echo 'end of class definition not found'
     return
@@ -48,7 +48,7 @@ function! ReactClassToFn()
 
   let className = tokens[1]
 
-  let displayNameLineNum = FindNextLine(startLineNum, 'static displayName = ')
+  let displayNameLineNum = vru#FindNextLine(startLineNum, 'static displayName = ')
   if displayNameLineNum
     let line = getline(displayNameLineNum)
     let pattern = '\vstatic displayName \= ''(.+)'';'
@@ -56,14 +56,14 @@ function! ReactClassToFn()
     let displayName = result[1] " first capture group
   endif
 
-  let propTypesLineNum = FindNextLine(startLineNum, 'static propTypes = {$')
+  let propTypesLineNum = vru#FindNextLine(startLineNum, 'static propTypes = {$')
   let propTypesInsideClass = propTypesLineNum ? 1 : 0
   if !propTypesLineNum
-    let propTypesLineNum = FindNextLine(startLineNum, className . '.propTypes = {$')
+    let propTypesLineNum = vru#FindNextLine(startLineNum, className . '.propTypes = {$')
   endif
   if propTypesLineNum
-    let propTypesLines = GetLinesTo(propTypesLineNum + 1, '};$')
-    call PopList(propTypesLines)
+    let propTypesLines = vru#GetLinesTo(propTypesLineNum + 1, '};$')
+    call vru#PopList(propTypesLines)
     let propNames = []
     for line in propTypesLines
       call add(propNames, split(Trim(line), ':')[0])
@@ -73,12 +73,12 @@ function! ReactClassToFn()
     let params = ''
   endif
 
-  let renderLineNum = FindNextLine(startLineNum, ' render() {')
+  let renderLineNum = vru#FindNextLine(startLineNum, ' render() {')
   if renderLineNum
-    let renderLines = GetLinesTo(renderLineNum + 1, '^\s*}$')
+    let renderLines = vru#GetLinesTo(renderLineNum + 1, '^\s*}$')
 
     " Remove last line that closes the render method.
-    call PopList(renderLines)
+    call vru#PopList(renderLines)
 
     " Remove any lines that destructure this.props since
     " all are destructured in the arrow function parameter list.
@@ -94,7 +94,7 @@ function! ReactClassToFn()
     endw
 
     " If the first render line is empty, remove it.
-    if len(Trim(renderLines[0])) == 0
+    if len(vru#Trim(renderLines[0])) == 0
       call remove(renderLines, 0)
     endif
   else
@@ -123,7 +123,7 @@ function! ReactClassToFn()
     let lines += ['};']
   endif
 
-  call DeleteLines(startLineNum, endLineNum)
+  call vru#DeleteLines(startLineNum, endLineNum)
   call append(startLineNum - 1, lines)
 endf
 
@@ -165,22 +165,22 @@ function! ReactFnToClass()
   let hasBlock = line =~# '{$'
   if hasBlock
     " Find next line that only contains "};".
-    if !FindNextLine(lineNum, '^\w*};\w*$')
+    if !vru#FindNextLine(lineNum, '^\w*};\w*$')
       echo 'arrow function end not found'
       return
     endif
   else
     " Find next line that ends with ";".
-    if !FindNextLine(lineNum, ';\w*$')
+    if !vru#FindNextLine(lineNum, ';\w*$')
       echo 'arrow function end not found'
       return
     endif
   endif
 
-  let renderLines = GetLinesTo(lineNum + 1, '^};$')
-  call PopList(renderLines)
+  let renderLines = vru#GetLinesTo(lineNum + 1, '^};$')
+  call vru#PopList(renderLines)
 
-  call DeleteLines(lineNum,
+  call vru#DeleteLines(lineNum,
   \ lineNum + len(renderLines) + (hasBlock ? 1 : 0))
 
   if !hasBlock
@@ -192,25 +192,25 @@ function! ReactFnToClass()
     endif
   endif
 
-  let displayNameLineNum = FindNextLine(lineNum, className . '.displayName =')
+  let displayNameLineNum = vru#FindNextLine(lineNum, className . '.displayName =')
   if displayNameLineNum
-    let displayName = LastToken(getline(displayNameLineNum))
-    call DeleteLine(displayNameLineNum)
-    call DeleteLineIfBlank(displayNameLineNum - 1)
+    let displayName = vru#LastToken(getline(displayNameLineNum))
+    call vru#DeleteLine(displayNameLineNum)
+    call vru#DeleteLineIfBlank(displayNameLineNum - 1)
   endif
 
-  let propTypesLineNum = FindNextLine(lineNum, className . '.propTypes =')
+  let propTypesLineNum = vru#FindNextLine(lineNum, className . '.propTypes =')
   if propTypesLineNum
-    let propTypes = GetLinesTo(propTypesLineNum + 1, '.*};')
+    let propTypes = vru#GetLinesTo(propTypesLineNum + 1, '.*};')
     let propNames = []
     for line in propTypes
-      let propName = Trim(split(line, ':')[0])
+      let propName = vru#Trim(split(line, ':')[0])
       if propName !=# '};'
         call add(propNames, propName)
       endif
     endfor
-    call DeleteLines(propTypesLineNum, propTypesLineNum + len(propTypes))
-    call DeleteLineIfBlank(propTypesLineNum - 1)
+    call vru#DeleteLines(propTypesLineNum, propTypesLineNum + len(propTypes))
+    call vru#DeleteLineIfBlank(propTypesLineNum - 1)
   endif
 
   let lines = ['class ' . className . ' extends Component {']
