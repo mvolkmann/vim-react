@@ -24,7 +24,10 @@ class Foo extends Component {
 // after
 
 // before
-const Foo = ({bar, baz}) =>
+const Foo = ({
+  bar,
+  baz
+}) =>
   <div>
     <div>bar = {bar}</div>
     <div>baz = {baz}</div>

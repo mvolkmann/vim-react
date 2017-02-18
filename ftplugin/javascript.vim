@@ -1,4 +1,33 @@
+let sample = "const Foo = ({\nbar,\nbaz\n}) =>"
+"let pattern = '\s*const (\w+) = \((\_.+)\) \=>( =>)?'
+let pattern = '\v\s*const (\w+) \= \((\_.+)\) \=\>( {})?'
+let result = matchlist(sample, pattern)
+let className = result[1]
+"echo 'className = ' . className
+let props = result[2]
+"echo 'props = ' . props
+"echo 'foo' =~# 'f'
+"echo matchlist('foo bar baz', '\v\s*(\w+) (\w+) (\w+)')
+
 " This file depends on many functions defined in plugins/utilities.vim.
+
+function! JSXPropJoin()
+  " If current line doesn't start with <, error.
+  " Find next >
+  " Join all the lines in between.
+  " Delete the previous lines.
+  " Append the new line.
+  echo 'not implemented yet'
+endf
+
+function! JSXPropSplit()
+  " If current line doesn't start with <, error.
+  " Get a string from < to >.
+  " Split the string using a regex.
+  " Delete the current line.
+  " Append the new lines.
+  echo 'not implemented yet'
+endf
 
 function! JSXCommentAdd()
   " Get first and last line number selected in visual mode.
@@ -66,7 +95,7 @@ function! ReactClassToFn()
     call vru#PopList(propTypesLines)
     let propNames = []
     for line in propTypesLines
-      call add(propNames, split(Trim(line), ':')[0])
+      call add(propNames, split(vru#Trim(line), ':')[0])
     endfor
     let params = '{' . join(propNames, ', ') . '}'
   else
@@ -118,7 +147,7 @@ function! ReactClassToFn()
   if exists('propTypesLines') && propTypesInsideClass
     let lines += ['', className . '.propTypes = {']
     for line in propTypesLines
-      call add(lines, '  ' . Trim(line))
+      call add(lines, '  ' . vru#Trim(line))
     endfor
     let lines += ['};']
   endif
@@ -130,12 +159,6 @@ endf
 " Converts a React component definition from an arrow function to a class.
 function! ReactFnToClass()
   let line = getline('.') " gets entire current line
-
-  if line !~# ' =>'
-    echo 'not an arrow function'
-    return
-  endif
-
   let tokens = split(line, ' ')
 
   if (tokens[0] !=# 'const')
@@ -145,6 +168,16 @@ function! ReactFnToClass()
 
   if (tokens[2] !=# '=')
     echo 'arrow function should be assigned to variable'
+    return
+  endif
+
+  let lineNum = line('.')
+  const arrowLineNum = vru#FindNextLine(lineNum, '=>')
+  echo 'arrowLineNum = '. arrowLineNum
+  return
+
+  if line !~# ' =>'
+    echo 'not an arrow function'
     return
   endif
 
@@ -159,8 +192,6 @@ function! ReactFnToClass()
   endif
 
   let className = tokens[1]
-
-  let lineNum = line('.')
 
   let hasBlock = line =~# '{$'
   if hasBlock
@@ -256,12 +287,33 @@ function! ReactFnToClass()
   call append(lineNum - 1, lines)
 endf
 
+function! OnArrowFunction(startLineNum)
+  let lineNum = a:startLineNum
+  let arrowLineNum = vru#FindNextLine(lineNum, '=>')
+  if !arrowLineNum
+    return []
+  endif
+
+  let result = ''
+  while lineNum <= arrowLineNum
+    let result = result . ' ' . vru#Trim(getline(lineNum))
+    let lineNum += 1
+  endw
+  echo 'result = ' . result
+  let pattern = '\v\s*const (\w+) \= \((\_.+)\) \=\>( {})?'
+  let matches = matchlist(result, pattern)
+  return matches
+endf
+
 function! ReactToggleComponent()
   let lineNum = line('.')
   let colNum = col('.')
 
   let line = getline('.') " gets entire current line
-  if line =~# '=>$' || line =~# '=> {$'
+  "if line =~# '=>$' || line =~# '=> {$'
+  let matches = OnArrowFunction(lineNum)
+  call vru#LogList('matches', matches)
+  if len(matches)
     call ReactFnToClass()
   elseif line =~# '^class ' || line =~# ' class '
     call ReactClassToFn()
@@ -273,11 +325,6 @@ function! ReactToggleComponent()
   call cursor(lineNum, colNum)
 endf
 
-" If <leader>rt for "React Toggle" is not already mapped ...
-if mapcheck('\<leader>rt', 'N') ==# ''
-  nnoremap <leader>rt :call ReactToggleComponent()<cr>
-endif
-
 " <c-u> removes the automatic range specification
 " when command mode is entered from visual mode,
 " changing the command line from :'<'> to just :
@@ -286,4 +333,14 @@ endif
 if mapcheck('\<leader>jc', 'N') ==# ''
   nnoremap <leader>jc :call JSXCommentRemove()<cr>
   vnoremap <leader>jc :<c-u>call JSXCommentAdd()<cr>
+endif
+
+" If <leader>js for "JSX Split" is not already mapped ...
+if mapcheck('\<leader>js', 'N') ==# ''
+  nnoremap <leader>js :call JSXPropSplit()<cr>
+endif
+
+" If <leader>rt for "React Toggle" is not already mapped ...
+if mapcheck('\<leader>rt', 'N') ==# ''
+  nnoremap <leader>rt :call ReactToggleComponent()<cr>
 endif

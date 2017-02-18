@@ -5,7 +5,7 @@ function! vru#DeleteLine(lineNum)
 endf
 
 function! vru#DeleteLineIfBlank(lineNum)
-  if (len(Trim(getline(a:lineNum))) == 0)
+  if (len(vru#Trim(getline(a:lineNum))) == 0)
     execute 'silent ' . a:lineNum . 'd'
   endif
 endf
