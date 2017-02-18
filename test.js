@@ -1,14 +1,12 @@
-import React, {Component} from 'react';
-
-const {number, string} = React.PropTypes;
+import React, {Component, PropTypes as t} from 'react';
 
 // before
-class Foo extends Component {
-  static displayName = 'Foo';
+class Foo1 extends Component {
+  static displayName = 'Foo1';
 
   static propTypes = {
-    bar: number,
-    baz: string
+    bar: t.number,
+    baz: t.string
   };
 
   render() {
@@ -24,18 +22,7 @@ class Foo extends Component {
 // after
 
 // before
-const Foo = ({
-  bar,
-  baz
-}) =>
-  <div>
-    <div>bar = {bar}</div>
-    <div>baz = {baz}</div>
-  </div>;
-// after
-
-// before
-const Foo = ({bar, baz}) => {
+const Foo2 = ({bar, baz}) => {
   return (
     <div>
       <div>bar = {bar}</div>
@@ -43,14 +30,29 @@ const Foo = ({bar, baz}) => {
     </div>
   );
 };
-// after
 
-// before
-Foo.displayName = 'FooBar';
-Foo.propTypes = {
-  bar: number,
-  baz: string
+Foo2.displayName = 'FooBar';
+Foo2.propTypes = {
+  bar: t.number,
+  baz: t.string
 };
 // after
 
-export default Foo1;
+// before
+const Foo3 = ({
+  bar,
+  baz
+}) =>
+  <div>
+    <div>bar = {bar}</div>
+    <div>baz = {baz}</div>
+  </div>;
+
+Foo3.displayName = 'FooBar';
+Foo3.propTypes = {
+  bar: t.number,
+  baz: t.string
+};
+// after
+
+export default Foo1, Foo2, Foo3;

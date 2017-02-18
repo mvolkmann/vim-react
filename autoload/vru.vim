@@ -17,7 +17,7 @@ endf
 
 " Returns the line number of the next line found starting
 " from lineNum that matches a given regular expression
-" or zero of none is found.
+" or zero if none is found.
 function! vru#FindNextLine(startLineNum, pattern)
   let lineNum = a:startLineNum
   let lastLineNum = line('$')
@@ -42,21 +42,6 @@ function! vru#FindPreviousLine(startLineNum, pattern)
     let lineNum -= 1
   endw
   return found ? lineNum + 1: 0
-endf
-
-" Returns the line number of the first line found starting
-" from lineNum that matches a given regular expression
-" or zero of none is found.
-function! vru#FindNextLine(startLineNum, pattern)
-  let lineNum = a:startLineNum
-  let lastLineNum = line('$')
-  let found = 0
-  while (!found && lineNum < lastLineNum)
-    let line = getline(lineNum)
-    let found = line =~ a:pattern
-    let lineNum += 1
-  endw
-  return found ? lineNum - 1: 0
 endf
 
 function! vru#GetLinesTo(startLineNum, pattern)
@@ -92,6 +77,7 @@ function! vru#NthToken(n, string)
   return tokens[a:n - 1]
 endf
 
+" Removes and returns the last element of a list.
 function! vru#PopList(list)
   let index = len(a:list) - 1
   let last = a:list[index]
@@ -99,11 +85,12 @@ function! vru#PopList(list)
   return last
 endf
 
+" Returns a copy of a string with leading and trailing whitespace trimmed.
 function! vru#Trim(string)
   return substitute(a:string, '^\s*\(.\{-}\)\s*$', '\1', '')
 endf
 
+" Returns a copy of a string with trailing whitespace trimmed.
 function! vru#TrimTrailing(string)
   return substitute(a:string, '^(\s*\.\{-}\)\s*$', '\1', '')
 endf
-
