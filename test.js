@@ -55,4 +55,4 @@ Foo3.propTypes = {
 };
 // after
 
-export default Foo1, Foo2, Foo3;
+export Foo1, Foo2, Foo3;

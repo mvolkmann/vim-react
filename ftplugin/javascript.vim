@@ -186,7 +186,6 @@ function! ReactFnToClass(matches)
   endif
 
   let renderLines = getline(arrowLineNum + 1, lastLineNum - (hasBlock ? 1 : 0))
-  "call vru#LogList('renderLines', renderLines)
 
   if !hasBlock
     " Remove semicolon from end of last line if exists.
@@ -266,6 +265,12 @@ endf
 
 function! OnArrowFunction(startLineNum)
   let lineNum = a:startLineNum
+
+  let line = getline(lineNum)
+  if line =~# '\v\s*class '
+    return []
+  endif
+
   let arrowLineNum = vru#FindNextLine(lineNum, '=>')
   if !arrowLineNum
     return []
@@ -292,6 +297,7 @@ function! ReactToggleComponent()
 
   let line = getline('.') " gets entire current line
   let matches = OnArrowFunction(lineNum)
+  "call vru#LogList('matches', matches)
   if len(matches)
     call ReactFnToClass(matches)
   elseif line =~# '^class ' || line =~# ' class '
