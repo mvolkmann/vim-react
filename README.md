@@ -10,7 +10,7 @@ Just place the cursor on the first line of an existing
 React component definition and run the function to toggle it.
 
 Here is an example of a functional React component.
-````
+```jsx
 const Foo = ({bar, baz}) => {
   return (
     <div>
@@ -26,10 +26,10 @@ Foo.propTypes = {
   bar: number,
   baz: string
 };
-````
+```
 
 Here is an example of an equivalent class-based React component.
-````
+```jsx
 class Foo extends Component {
   static displayName = 'Foo';
 
@@ -48,7 +48,7 @@ class Foo extends Component {
     );
   }
 }
-````
+```
 
 `ReactToggleComponent` will convert either of these forms to the other.
 
